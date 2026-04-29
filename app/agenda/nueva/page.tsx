@@ -15,6 +15,19 @@ export default function NuevaCitaPage() {
   const [numeroSemanas, setNumeroSemanas] = useState(4)
   const [cargando, setCargando] = useState(false)
 
+  // Generamos los bloques de 15 minutos (Ej: de 08:00 a 20:00)
+  const generarBloquesHorarios = () => {
+    const bloques = []
+    for (let h = 8; h <= 20; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const horaFormateada = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        bloques.push(horaFormateada)
+      }
+    }
+    return bloques
+  }
+  const opcionesHora = generarBloquesHorarios()
+
   useEffect(() => {
     const obtenerPacientes = async () => {
       const { data } = await supabase.from('pacientes').select('id, nombre').order('nombre')
@@ -30,7 +43,6 @@ export default function NuevaCitaPage() {
     const fechaBase = new Date(`${fecha}T${hora}`)
     const citasAInsertar = []
 
-    // Lógica para crear una o múltiples citas
     if (esRecurrente) {
       for (let i = 0; i < numeroSemanas; i++) {
         const fechaIteracion = addWeeks(fechaBase, i)
@@ -48,7 +60,6 @@ export default function NuevaCitaPage() {
       })
     }
 
-    // Insertamos el array completo en la base de datos (Batch Insert)
     const { error } = await supabase
       .from('citas')
       .insert(citasAInsertar)
@@ -96,17 +107,20 @@ export default function NuevaCitaPage() {
                 className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white color-scheme-light dark:color-scheme-dark"
               />
             </div>
-            {/* Hora */}
+            {/* Nuevo Selector de Hora con diseño limpio */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Hora</label>
-              <input 
-                type="time" 
+              <select 
                 required
-                step="900" 
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white color-scheme-light dark:color-scheme-dark"
-              />
+                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              >
+                <option value="">-- Selecciona --</option>
+                {opcionesHora.map((opcion) => (
+                  <option key={opcion} value={opcion}>{opcion}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -122,7 +136,6 @@ export default function NuevaCitaPage() {
               <span className="font-medium text-slate-700 dark:text-slate-300">Sesión Recurrente (Semanal)</span>
             </label>
             
-            {/* Solo se muestra si el checkbox está activo */}
             {esRecurrente && (
               <div className="pl-8 pt-2">
                 <label className="block text-sm text-slate-600 dark:text-slate-400 mb-2">¿Cuántas semanas seguidas?</label>
@@ -130,7 +143,7 @@ export default function NuevaCitaPage() {
                   type="number" 
                   min="2" 
                   max="12"
-                  value={numeroSemanas}
+                  value={numeroSemanas || ''}
                   onChange={(e) => setNumeroSemanas(parseInt(e.target.value) || 0)}
                   className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                 />

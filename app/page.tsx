@@ -3,7 +3,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Barra de navegación simple */}
       <nav className="p-6 bg-white border-b border-slate-200 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-blue-700">AgendaPro <span className="text-slate-400 font-light">| Psicoterapia</span></h1>
+        <h1 className="text-2xl font-bold text-blue-700">MediBlock <span className="text-slate-400 font-light">| Gestión Médica</span></h1>
         <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
           Iniciar Sesión
         </button>

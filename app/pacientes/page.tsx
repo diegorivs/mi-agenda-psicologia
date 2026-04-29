@@ -62,7 +62,7 @@ export default function ListaPacientes() {
                     <td className="px-6 py-4 text-slate-500">{paciente.rut}</td>
                     <td className="px-6 py-4 text-slate-500">{paciente.celular}</td>
                     <td className="px-6 py-4">
-                      <button className="text-blue-600 hover:underline text-sm font-medium mr-4">Ver Ficha</button>
+                      <Link href={`/pacientes/${paciente.id}`} className="text-blue-600 hover:underline text-sm font-medium mr-4">Ver Ficha</Link>
                       <button className="text-green-600 hover:underline text-sm font-medium">Nueva Cita</button>
                     </td>
                   </tr>
