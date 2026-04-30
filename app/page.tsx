@@ -1,12 +1,13 @@
+import Link from 'next/link'
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Barra de navegación simple */}
       <nav className="p-6 bg-white border-b border-slate-200 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-blue-700">MediBlock <span className="text-slate-400 font-light">| Gestión Médica</span></h1>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+        <Link href="/login" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition">
           Iniciar Sesión
-        </button>
+        </Link>
       </nav>
 
       <main className="max-w-5xl mx-auto py-16 px-6 text-center">
@@ -38,9 +39,9 @@ export default function Home() {
             </div>
             <h3 className="text-2xl font-bold mb-4">Para el Paciente</h3>
             <p className="text-slate-500 mb-6">Reserva de horas inmediata con pago integrado vía Stripe o Mercado Pago.</p>
-            <button className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">
-              Reservar y Pagar
-            </button>
+            <Link href="/reservar" className="block w-full text-center bg-green-600 text-white px-6 py-3 rounded-xl font-bold transition hover:bg-green-700">
+  Reservar y Pagar
+</Link>
           </div>
         </div>
       </main>
