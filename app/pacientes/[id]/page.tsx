@@ -1,167 +1,233 @@
 "use client"
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calendar, User, CheckCircle, Clock, FileText, Save } from 'lucide-react'
-import { format } from 'date-fns'
+import Link from 'next/link'
+import { format, differenceInYears, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { ArrowLeft, User, Mail, Phone, Fingerprint, Calendar as CalendarIcon, MapPin, Activity, Edit2, Save, X, FileText } from 'lucide-react'
 
-export default function FichaPaciente({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter()
-  const { id } = use(params)
-
+export default function FichaPaciente() {
+  const { id } = useParams()
   const [paciente, setPaciente] = useState<any>(null)
-  const [citas, setCitas] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
-  const [guardandoNotaId, setGuardandoNotaId] = useState<string | null>(null)
+  
+  // Estado para el Modo Edición
+  const [editando, setEditando] = useState(false)
+  const [formData, setFormData] = useState<any>({})
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      const { data: pacienteData } = await supabase
-        .from('pacientes')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (pacienteData) setPaciente(pacienteData)
-
-      const { data: citasData } = await supabase
-        .from('citas')
-        .select('*')
-        .eq('paciente_id', id)
-        .order('fecha_hora', { ascending: false })
-
-      if (citasData) setCitas(citasData || [])
-      
-      setCargando(false)
-    }
-
-    cargarDatos()
-  }, [id])
-
-  const togglePago = async (citaId: string, estadoActual: boolean) => {
-    const nuevoEstado = !estadoActual
-    setCitas(prev => prev.map(c => c.id === citaId ? { ...c, estado_pago: nuevoEstado } : c))
-
-    await supabase.from('citas').update({ estado_pago: nuevoEstado }).eq('id', citaId)
-  }
-
-  // FUNCIÓN PARA GUARDAR NOTAS CLÍNICAS
-  const guardarNota = async (citaId: string, texto: string) => {
-    setGuardandoNotaId(citaId)
-    const { error } = await supabase
-      .from('citas')
-      .update({ notas: texto })
-      .eq('id', citaId)
+  const cargarPaciente = async () => {
+    setCargando(true)
+    const { data, error } = await supabase
+      .from('pacientes')
+      .select('*')
+      .eq('id', id)
+      .single()
 
     if (error) {
-      alert("Error al guardar la nota clínica.")
+      console.error(error)
+    } else {
+      setPaciente(data)
+      setFormData(data) // Pre-llenamos el formulario de edición con los datos actuales
     }
-    setGuardandoNotaId(null)
+    setCargando(false)
   }
 
-  if (cargando) return <div className="min-h-screen flex items-center justify-center p-8 text-slate-500 dark:text-slate-400 font-medium">Cargando expediente clínico...</div>
-  if (!paciente) return <div className="min-h-screen flex items-center justify-center p-8 text-red-500 font-bold">Registro no encontrado.</div>
+  useEffect(() => {
+    cargarPaciente()
+  }, [id])
+
+  const guardarCambios = async () => {
+    const { error } = await supabase
+      .from('pacientes')
+      .update({
+        nombre: formData.nombre,
+        rut: formData.rut,
+        email: formData.email,
+        celular: formData.celular,
+        fecha_nacimiento: formData.fecha_nacimiento || null,
+        sexo: formData.sexo,
+        prevision: formData.prevision,
+        direccion: formData.direccion,
+        notas_clinicas: formData.notas_clinicas
+      })
+      .eq('id', id)
+
+    if (error) {
+      alert("Error al actualizar la ficha")
+    } else {
+      setPaciente(formData) // Actualizamos la vista local
+      setEditando(false) // Cerramos el modo edición
+    }
+  }
+
+  // Calculadora de Edad Clínica
+  const calcularEdad = (fechaNacimiento: string | null) => {
+    if (!fechaNacimiento) return 'No registrada'
+    const edad = differenceInYears(new Date(), parseISO(fechaNacimiento))
+    return `${edad} años`
+  }
+
+  if (cargando) return <div className="min-h-screen flex items-center justify-center text-slate-500">Cargando ficha clínica...</div>
+  if (!paciente) return <div className="min-h-screen flex items-center justify-center text-red-500">Paciente no encontrado.</div>
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 md:p-8 transition-colors duration-200">
       <div className="max-w-5xl mx-auto space-y-6">
         
-        {/* Cabecera */}
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => router.back()} className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-            <ArrowLeft size={20} className="text-slate-600 dark:text-slate-300" />
-          </button>
+        {/* Cabecera y Controles */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/pacientes" className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition">
+              <ArrowLeft size={20} />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white">{editando ? 'Editando Ficha' : paciente.nombre}</h1>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">RUT: {paciente.rut}</p>
+            </div>
+          </div>
+
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white capitalize">{paciente.nombre}</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Historial Clínico y Evolución</p>
+            {editando ? (
+              <div className="flex gap-3">
+                <button onClick={() => {setFormData(paciente); setEditando(false)}} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition flex items-center gap-2">
+                  <X size={18} /> Cancelar
+                </button>
+                <button onClick={guardarCambios} className="px-4 py-2 bg-green-600 text-white font-bold hover:bg-green-700 rounded-xl transition flex items-center gap-2 shadow-sm">
+                  <Save size={18} /> Guardar
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setEditando(true)} className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-xl transition flex items-center gap-2">
+                <Edit2 size={18} /> Editar Ficha
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Datos del Paciente */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 h-fit">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
-                <User size={24} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">Ficha Base</h2>
-            </div>
-            
-            <div className="space-y-5 text-sm">
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 font-semibold mb-1">RUT</p>
-                <p className="text-slate-900 dark:text-white font-bold text-base">{paciente.rut}</p>
-              </div>
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 font-semibold mb-1">Contacto</p>
-                <p className="text-slate-900 dark:text-white font-medium text-base">{paciente.email}</p>
-                <p className="text-slate-900 dark:text-white font-medium text-base">{paciente.celular}</p>
+        {/* Cuerpo de la Ficha Clínica */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Columna Izquierda: Datos Duros */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+                <User className="text-blue-500" size={18} /> Contacto
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Teléfono</label>
+                  {editando ? (
+                    <input value={formData.celular || ''} onChange={e => setFormData({...formData, celular: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" />
+                  ) : (
+                    <div className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-1"><Phone size={16} className="text-slate-400"/> {paciente.celular || '-'}</div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Correo</label>
+                  {editando ? (
+                    <input value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" />
+                  ) : (
+                    <div className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-1"><Mail size={16} className="text-slate-400"/> {paciente.email || '-'}</div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dirección</label>
+                  {editando ? (
+                    <input value={formData.direccion || ''} onChange={e => setFormData({...formData, direccion: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" />
+                  ) : (
+                    <div className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-1"><MapPin size={16} className="text-slate-400"/> {paciente.direccion || '-'}</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Registro de Sesiones y Notas */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100 dark:border-slate-700">
-                <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-                  <Calendar size={24} className="text-green-600 dark:text-green-400" />
+          {/* Columna Central y Derecha: Anamnesis y Notas */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Tarjeta de Biometría */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-6">
+                <Activity className="text-emerald-500" size={18} /> Biometría y Cobertura
+              </h2>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Edad</label>
+                  {editando ? (
+                    <input type="date" value={formData.fecha_nacimiento || ''} onChange={e => setFormData({...formData, fecha_nacimiento: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" />
+                  ) : (
+                    <div className="text-lg font-black text-slate-700 dark:text-slate-200 mt-1">{calcularEdad(paciente.fecha_nacimiento)}</div>
+                  )}
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">Sesiones Realizadas</h2>
-              </div>
-
-              <div className="space-y-6">
-                {citas.map(cita => (
-                  <div key={cita.id} className="p-5 bg-slate-50 dark:bg-slate-700/40 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-4">
-                    
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-4">
-                        <div className="text-center bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm min-w-[60px] border border-slate-100 dark:border-slate-600">
-                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">{format(new Date(cita.fecha_hora), 'MMM', { locale: es })}</p>
-                          <p className="text-lg font-black text-slate-800 dark:text-white">{format(new Date(cita.fecha_hora), 'dd')}</p>
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white capitalize">{format(new Date(cita.fecha_hora), 'EEEE, HH:mm', { locale: es })}</p>
-                          <button 
-                            onClick={() => togglePago(cita.id, cita.estado_pago)}
-                            className={`flex items-center gap-1.5 text-[10px] font-black mt-1.5 px-2 py-1 rounded-md border transition-all ${
-                              cita.estado_pago 
-                                ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" 
-                                : "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400"
-                            }`}
-                          >
-                            {cita.estado_pago ? <CheckCircle size={12} /> : <Clock size={12} />}
-                            {cita.estado_pago ? 'PAGADO' : 'PENDIENTE'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SECCIÓN DE NOTAS CLÍNICAS */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                        <FileText size={14} />
-                        <span className="text-xs font-bold uppercase tracking-wider">Evolución de la Sesión</span>
-                      </div>
-                      <textarea 
-                        defaultValue={cita.notas || ''}
-                        placeholder="Escribe aquí los apuntes clínicos, anamnesis o tareas para el paciente..."
-                        onBlur={(e) => guardarNota(cita.id, e.target.value)}
-                        className="w-full min-h-[100px] p-3 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-200 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                      />
-                      <div className="flex justify-end">
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic">
-                          {guardandoNotaId === cita.id ? 'Guardando cambios...' : 'Los cambios se guardan automáticamente al salir del cuadro.'}
-                        </p>
-                      </div>
-                    </div>
-
+                
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nacimiento</label>
+                  <div className="font-medium text-slate-700 dark:text-slate-300 mt-2">
+                    {paciente.fecha_nacimiento ? format(parseISO(paciente.fecha_nacimiento), 'dd/MM/yyyy') : '-'}
                   </div>
-                ))}
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sexo</label>
+                  {editando ? (
+                    <select value={formData.sexo || ''} onChange={e => setFormData({...formData, sexo: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
+                      <option value="">-</option>
+                      <option value="Femenino">Femenino</option>
+                      <option value="Masculino">Masculino</option>
+                    </select>
+                  ) : (
+                    <div className="font-medium text-slate-700 dark:text-slate-300 mt-2">{paciente.sexo || '-'}</div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Previsión</label>
+                  {editando ? (
+                     <select value={formData.prevision || ''} onChange={e => setFormData({...formData, prevision: e.target.value})} className="w-full mt-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
+                        <option value="">-</option>
+                        <option value="Fonasa">Fonasa</option>
+                        <option value="Isapre Banmédica">Isapre Banmédica</option>
+                        <option value="Isapre Colmena">Isapre Colmena</option>
+                        <option value="Isapre Consalud">Isapre Consalud</option>
+                        <option value="Isapre CruzBlanca">Isapre CruzBlanca</option>
+                        <option value="Isapre Nueva Masvida">Isapre Nueva Masvida</option>
+                        <option value="Particular">Particular</option>
+                     </select>
+                  ) : (
+                    <div className="font-medium text-slate-700 dark:text-slate-300 mt-2">
+                      <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1 rounded-lg text-sm font-bold">
+                        {paciente.prevision || '-'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Tarjeta de Notas Clínicas */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
+                <FileText className="text-amber-500" size={18} /> Notas Clínicas / Antecedentes
+              </h2>
+              {editando ? (
+                <textarea 
+                  value={formData.notas_clinicas || ''} 
+                  onChange={e => setFormData({...formData, notas_clinicas: e.target.value})}
+                  rows={5} 
+                  className="w-full p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/50 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 dark:text-white resize-none"
+                  placeholder="Escribe aquí los antecedentes relevantes..."
+                />
+              ) : (
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl text-slate-700 dark:text-slate-300 min-h-[100px] whitespace-pre-wrap">
+                  {paciente.notas_clinicas ? paciente.notas_clinicas : <span className="text-amber-600/50 italic">Sin notas clínicas registradas. Haz clic en Editar Ficha para añadir antecedentes.</span>}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>

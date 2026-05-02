@@ -82,6 +82,9 @@ export default function AgendaPage() {
                 <Plus size={18} /> Nueva Cita
               </button>
             </Link>
+            <Link href="/solicitudes" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 px-4 py-2 rounded-xl font-bold hover:bg-amber-200 dark:hover:bg-amber-900/50 transition">
+  Ver Solicitudes Pendientes
+</Link>
           </div>
         </div>
 
