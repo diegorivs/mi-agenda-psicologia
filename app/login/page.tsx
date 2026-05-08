@@ -12,29 +12,45 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const iniciarSesion = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setCargando(true)
-  setErrorMsg(null)
+    e.preventDefault()
+    setCargando(true)
+    setErrorMsg(null)
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    })
+    try {
+      // 1. Verificamos credenciales (contraseña)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      })
 
-    if (error) {
-      setErrorMsg("Correo o contraseña incorrectos.")
-      setCargando(false)
-    } else {
+      if (authError) {
+        setErrorMsg("Correo o contraseña incorrectos.")
+        setCargando(false)
+        return
+      }
+
+      // 2. Si la contraseña es correcta, hacemos el TRIAGE: consultamos su rol
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles_usuarios')
+        .select('rol')
+        .eq('email', email)
+        .single()
+
       // Forzamos un refresco de la ruta para que el middleware lea la cookie
-      router.refresh() 
-      router.push('/agenda')
+      router.refresh()
+
+      // 3. Derivamos al paciente o al profesional a su sala correspondiente
+      if (roleData && roleData.rol === 'profesional') {
+        router.push('/agenda') // Va al Dashboard que creamos hoy
+      } else {
+        router.push('/mi-portal') // Va a la sala de espera virtual (por construir)
+      }
+
+    } catch (err) {
+      setErrorMsg("Ocurrió un error de conexión.")
+      setCargando(false)
     }
-  } catch (err) {
-    setErrorMsg("Ocurrió un error de conexión.")
-    setCargando(false)
   }
-}
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-200">
@@ -43,7 +59,7 @@ export default function LoginPage() {
           Acceso Clínico
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
-          Ingresa tus credenciales para acceder a la agenda
+          Ingresa tus credenciales para acceder a la plataforma
         </p>
       </div>
 

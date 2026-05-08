@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import Link from 'next/link'
 import { ArrowLeft, User, Mail, Phone, Fingerprint, Calendar as CalendarIcon, MapPin, Activity, Save, Loader2 } from 'lucide-react'
 

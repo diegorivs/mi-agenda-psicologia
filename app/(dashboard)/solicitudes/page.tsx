@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Check, X, Clock, User, Phone, Mail, Calendar as CalendarIcon } from 'lucide-react'
