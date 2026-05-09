@@ -28,7 +28,16 @@ export default function NuevoPaciente() {
     setCargando(true)
 
     try {
-      // Usamos el mismo objeto limpio que creamos en Supabase
+      // 1. OBTENER AL PROFESIONAL CONECTADO
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        alert('Error: No se detectó un usuario activo.')
+        setCargando(false)
+        return
+      }
+
+      // 2. CREAR EL PACIENTE CON LA ETIQUETA DEL PROFESIONAL
       const { data, error } = await supabase
         .from('pacientes')
         .insert([{ 
@@ -36,18 +45,18 @@ export default function NuevoPaciente() {
           rut, 
           email, 
           celular,
-          fecha_nacimiento: fechaNacimiento || null, // Si está vacío, mandamos null, no string vacío
+          fecha_nacimiento: fechaNacimiento || null,
           sexo,
           prevision,
           direccion,
-          notas_clinicas: notasClinicas
+          notas_clinicas: notasClinicas,
+          profesional_id: user.id // <--- LA ETIQUETA DE DUEÑO
         }])
         .select()
         .single()
 
       if (error) throw error
 
-      // Si todo sale bien, lo redirigimos a la nueva ficha del paciente
       router.push(`/pacientes/${data.id}`)
       
     } catch (error) {

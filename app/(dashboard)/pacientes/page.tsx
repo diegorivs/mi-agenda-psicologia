@@ -10,18 +10,25 @@ export default function DirectorioPacientes() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
 
-  // 1. EXTRAER TODOS LOS PACIENTES DE LA BASE DE DATOS
+  // 1. EXTRAER SÓLO LOS PACIENTES DE ESTE PROFESIONAL
   const cargarPacientes = async () => {
     setCargando(true)
-    const { data, error } = await supabase
-      .from('pacientes')
-      .select('*')
-      .order('nombre', { ascending: true }) // Los ordenamos alfabéticamente por defecto
+    
+    // Obtenemos quién está conectado
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (error) {
-      console.error("Error al cargar pacientes:", error)
-    } else {
-      setPacientes(data || [])
+    if (user) {
+      const { data, error } = await supabase
+        .from('pacientes')
+        .select('*')
+        .eq('profesional_id', user.id) // <--- EL FILTRO DE AISLAMIENTO
+        .order('nombre', { ascending: true })
+
+      if (error) {
+        console.error("Error al cargar pacientes:", error)
+      } else {
+        setPacientes(data || [])
+      }
     }
     setCargando(false)
   }
