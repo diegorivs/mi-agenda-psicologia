@@ -7,7 +7,13 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { ArrowLeft, User, CheckCircle2, Loader2, Mail, Phone, Fingerprint } from 'lucide-react'
 
+// 1. IMPORTAMOS EL NUEVO COMPONENTE BUSCADOR
+import BuscadorProfesional from '../../components/BuscadorProfesional'
+
 export default function PortalReserva() {
+  // ESTADO NUEVO: Para guardar a quién seleccionó el paciente
+  const [profesionalId, setProfesionalId] = useState<string | null>(null)
+
   // Estados de selección
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | null>(null)
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
@@ -61,21 +67,22 @@ export default function PortalReserva() {
         pacienteId = nuevoPaciente.id
       }
 
-      // 3. Creamos la cita con estado 'pendiente'
+      // 3. Creamos la cita asignándola al PROFESIONAL correcto
       const fechaHoraString = `${format(fechaSeleccionada!, 'yyyy-MM-dd')}T${horaSeleccionada}:00`
       
       const { error: errorC } = await supabase
         .from('citas')
         .insert([{
           paciente_id: pacienteId,
+          profesional_id: profesionalId, // <--- 2. INYECTAMOS EL ID DEL DOCTOR AQUÍ
           fecha_hora: fechaHoraString,
           estado_pago: false,
-          estado_cita: 'pendiente' // Aquí queda esperando aprobación del profesional
+          estado_cita: 'pendiente' 
         }])
 
       if (errorC) throw errorC
 
-      setPaso(3) // Pasamos a la pantalla de éxito
+      setPaso(3) 
     } catch (error) {
       console.error(error)
       alert("Hubo un problema al procesar tu solicitud. Por favor, intenta nuevamente.")
@@ -84,7 +91,6 @@ export default function PortalReserva() {
     }
   }
 
-  // PANTALLA DE ÉXITO
   if (paso === 3) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -110,7 +116,7 @@ export default function PortalReserva() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 font-sans p-4 md:p-8 transition-colors duration-200">
       <div className="max-w-3xl mx-auto">
         
         <div className="flex items-center justify-between mb-8">
@@ -128,10 +134,13 @@ export default function PortalReserva() {
           
           {paso === 1 ? (
             <>
-              <h1 className="text-2xl font-bold text-slate-800 mb-8">Selecciona tu horario</h1>
+              {/* 3. COLOCAMOS EL BUSCADOR AQUÍ AL INICIO */}
+              <BuscadorProfesional onSelectProfesional={setProfesionalId} />
+
+              <h1 className="text-2xl font-bold text-slate-800 mb-8 mt-8 border-t border-slate-100 pt-8">Selecciona tu horario</h1>
               
               {/* Carrusel de Días */}
-              <div className="mb-10">
+              <div className={`mb-10 transition-opacity ${profesionalId ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-slate-800">¿Qué día?</h2>
                   <span className="text-sm font-semibold text-slate-500 capitalize">{format(new Date(), 'MMMM yyyy', { locale: es })}</span>
@@ -150,7 +159,7 @@ export default function PortalReserva() {
               </div>
 
               {/* Matriz de Horas */}
-              <div className={fechaSeleccionada ? 'opacity-100' : 'opacity-30 pointer-events-none'}>
+              <div className={fechaSeleccionada && profesionalId ? 'opacity-100' : 'opacity-30 pointer-events-none'}>
                 <h2 className="text-lg font-bold text-slate-800 mb-6">Bloques disponibles</h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                   {[...horasManana, ...horasTarde].map(hora => (
@@ -162,7 +171,12 @@ export default function PortalReserva() {
               </div>
 
               <div className="mt-12 pt-6 border-t border-slate-100 flex justify-end">
-                <button disabled={!horaSeleccionada} onClick={() => setPaso(2)} className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold disabled:bg-slate-100 disabled:text-slate-400 transition-all">
+                {/* Evitamos que avance si no hay hora NI profesional seleccionado */}
+                <button 
+                  disabled={!horaSeleccionada || !profesionalId} 
+                  onClick={() => setPaso(2)} 
+                  className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold disabled:bg-slate-100 disabled:text-slate-400 transition-all"
+                >
                   Continuar
                 </button>
               </div>
@@ -212,10 +226,10 @@ export default function PortalReserva() {
                 </div>
               </div>
 
-              <button 
+               <button 
                 type="submit" 
                 disabled={cargando}
-                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:bg-blue-400"
               >
                 {cargando ? <Loader2 className="animate-spin" /> : 'Confirmar Solicitud de Hora'}
               </button>

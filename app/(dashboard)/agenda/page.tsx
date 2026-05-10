@@ -19,18 +19,31 @@ export default function AgendaPage() {
     router.push('/login')
   }
 
-  // Función corregida: Extrae la semana EXACTA que estás viendo
+  // Función corregida: Extrae la semana EXACTA y aísla los datos del profesional
   const cargarCitas = async () => {
+    // 1. OBTENER IDENTIDAD: Verificamos quién es el profesional conectado
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Si por algún motivo no detecta al usuario, detenemos la operación por seguridad
+    if (!user) return 
+
+    // 2. PARÁMETROS TEMPORALES: Definimos el inicio y fin de la semana
     const inicio = startOfWeek(fechaSeleccionada, { weekStartsOn: 1 }).toISOString()
     const fin = endOfWeek(fechaSeleccionada, { weekStartsOn: 1 }).toISOString()
 
+    // 3. CONSULTA AISLADA: Extraemos solo las citas que le pertenecen a este ID
     const { data, error } = await supabase
       .from('citas')
       .select('*, pacientes(nombre)')
+      .eq('profesional_id', user.id) // <--- EL FILTRO DE AISLAMIENTO ESTRICTO
       .gte('fecha_hora', inicio)
       .lte('fecha_hora', fin)
 
-    if (!error) setCitas(data || [])
+    if (error) {
+      console.error("Error al cargar la agenda:", error)
+    } else {
+      setCitas(data || [])
+    }
   }
 
   useEffect(() => {

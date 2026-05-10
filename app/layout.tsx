@@ -24,10 +24,19 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        
+        {/* EL NAVBAR GLOBAL FUE RETIRADO DE AQUÍ */}
+        
+        {/* 3. EL RESTO DE LAS PANTALLAS SE INYECTA AQUÍ ABAJO */}
+        <main className="flex-grow">
+          {children}
+        </main>
+
+      </body>
     </html>
   );
 }

@@ -35,10 +35,26 @@ export default function RegistroProfesional() {
     if (authError) {
       alert(authError.message)
     } else {
-      // 2. Vincular el correo al rol de profesional en nuestra tabla
+      // 2. Vincular el correo al rol de profesional en nuestra tabla (Triage de Login)
       await supabase
         .from('roles_usuarios')
         .insert([{ email: email, rol: 'profesional' }])
+
+      // 3. NUEVO: Inscribirlo en el Directorio Público para que los pacientes lo encuentren
+      if (authData.user) {
+        const { error: perfilError } = await supabase
+          .from('perfiles_profesionales')
+          .insert([{ 
+            id: authData.user.id, 
+            nombre_completo: nombre,
+            especialidad: 'Profesional de MediBlock' // Por defecto por ahora
+          }])
+
+        if (perfilError) {
+          console.error("Error al crear perfil público:", perfilError)
+          // No alertamos al usuario para no interrumpir el flujo, pero lo registramos
+        }
+      }
 
       alert("Cuenta profesional creada con éxito. Ahora puedes iniciar sesión.")
       router.push('/login')

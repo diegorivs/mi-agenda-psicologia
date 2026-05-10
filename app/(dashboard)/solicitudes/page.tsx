@@ -10,13 +10,23 @@ export default function PanelSolicitudes() {
   const [solicitudes, setSolicitudes] = useState<any[]>([])
   const [cargando, setCargando] = useState(true)
 
-  // 1. CARGAR LAS SOLICITUDES PENDIENTES
+  // 1. CARGAR LAS SOLICITUDES PENDIENTES AISLADAS POR PROFESIONAL
   const cargarSolicitudes = async () => {
     setCargando(true)
-    // Aquí hacemos una consulta "relacional": traemos las citas pendientes Y los datos del paciente asociado
+
+    // A. OBTENER IDENTIDAD: Verificamos quién es el profesional conectado
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      setCargando(false)
+      return // Detenemos la operación si por algún motivo no hay sesión
+    }
+
+    // B. CONSULTA AISLADA: Traemos las citas pendientes Y los datos del paciente
     const { data, error } = await supabase
       .from('citas')
       .select('*, pacientes(*)')
+      .eq('profesional_id', user.id) // <--- EL FILTRO DE AISLAMIENTO ESTRICTO
       .eq('estado_cita', 'pendiente')
       .order('fecha_hora', { ascending: true })
 
